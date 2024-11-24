@@ -13,7 +13,7 @@ app.get("/mp3", async (req, res) => {
   }
 
   try {
-    const apiUrl = `https://smfahim.xyz/ytb?url=${encodeURIComponent(url)}`;
+    const apiUrl = `https://www.samirxpikachu.run.place/ytb?url=${encodeURIComponent(url)}`;
     const response = await axios.get(apiUrl, { timeout: 15000 }); // 15-second timeout
 
     const audioUrl = response.data?.data?.audio;
@@ -45,7 +45,7 @@ app.get("/mp4", async (req, res) => {
   }
 
   try {
-    const apiUrl = `https://smfahim.xyz/ytb?url=${encodeURIComponent(url)}`;
+    const apiUrl = `https://www.samirxpikachu.run.place/ytb?url=${encodeURIComponent(url)}`;
     const response = await axios.get(apiUrl, { timeout: 15000 }); // 15-second timeout
 
     const videoUrl = response.data?.data?.video;
