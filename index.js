@@ -16,7 +16,7 @@ app.get("/mp3", async (req, res) => {
     const apiUrl = `https://www.samirxpikachu.run.place/ytb?url=${encodeURIComponent(url)}`;
     const response = await axios.get(apiUrl, { timeout: 15000 }); // 15-second timeout
 
-    const audioUrl = response.data?.data?.audio;
+    const audioUrl = response.data?.data?.audios;
     const title = response.data?.data?.title || "audio";
 
     if (!audioUrl) {
@@ -48,7 +48,7 @@ app.get("/mp4", async (req, res) => {
     const apiUrl = `https://www.samirxpikachu.run.place/ytb?url=${encodeURIComponent(url)}`;
     const response = await axios.get(apiUrl, { timeout: 15000 }); // 15-second timeout
 
-    const videoUrl = response.data?.data?.video;
+    const videoUrl = response.data?.data?.videos;
     const title = response.data?.data?.title || "video";
 
     if (!videoUrl) {
