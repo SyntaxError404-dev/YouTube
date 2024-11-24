@@ -3,6 +3,13 @@ const axios = require('axios');
 const app = express();
 const port = 3000;
 
+// Enable CORS if needed
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+    next();
+});
+
 // Utility function to fetch data from the main API
 async function fetchVideoData(url) {
     try {
@@ -19,26 +26,30 @@ app.get('/mp3', async (req, res) => {
         const { url } = req.query;
         
         if (!url) {
-            return res.status(400).json({ error: 'URL parameter is required' });
+            return res.status(400).json({ 
+                status: false,
+                message: 'URL parameter is required'
+            });
         }
 
         const data = await fetchVideoData(url);
         
-        // Set headers for audio download
-        res.setHeader('Content-Disposition', `attachment; filename="${data.title}.mp3"`);
-        res.setHeader('Content-Type', 'audio/mp3');
-
-        // Pipe the audio stream to response
-        const audioStream = await axios({
-            method: 'get',
-            url: data.audios,
-            responseType: 'stream'
+        res.json({
+            status: true,
+            result: {
+                title: data.title,
+                duration: data.duration,
+                author: data.author,
+                thumbnail: data.image,
+                download_url: data.audios
+            }
         });
 
-        audioStream.data.pipe(res);
-
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ 
+            status: false,
+            message: error.message 
+        });
     }
 });
 
@@ -48,33 +59,52 @@ app.get('/mp4', async (req, res) => {
         const { url } = req.query;
         
         if (!url) {
-            return res.status(400).json({ error: 'URL parameter is required' });
+            return res.status(400).json({ 
+                status: false,
+                message: 'URL parameter is required'
+            });
         }
 
         const data = await fetchVideoData(url);
         
-        // Set headers for video download
-        res.setHeader('Content-Disposition', `attachment; filename="${data.title}.mp4"`);
-        res.setHeader('Content-Type', 'video/mp4');
-
-        // Pipe the video stream to response
-        const videoStream = await axios({
-            method: 'get',
-            url: data.videos,
-            responseType: 'stream'
+        res.json({
+            status: true,
+            result: {
+                title: data.title,
+                duration: data.duration,
+                author: data.author,
+                thumbnail: data.image,
+                download_url: data.videos
+            }
         });
 
-        videoStream.data.pipe(res);
-
     } catch (error) {
-        res.status(500).json({ error: error.message });
+        res.status(500).json({ 
+            status: false,
+            message: error.message 
+        });
     }
+});
+
+// Add a simple home route
+app.get('/', (req, res) => {
+    res.json({
+        status: true,
+        message: 'YouTube Downloader API',
+        endpoints: {
+            mp3: '/mp3?url=YOUTUBE_URL',
+            mp4: '/mp4?url=YOUTUBE_URL'
+        }
+    });
 });
 
 // Error handling middleware
 app.use((err, req, res, next) => {
     console.error(err.stack);
-    res.status(500).json({ error: 'Something went wrong!' });
+    res.status(500).json({ 
+        status: false,
+        message: 'Something went wrong!' 
+    });
 });
 
 // Start server
