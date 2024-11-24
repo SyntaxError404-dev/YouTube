@@ -1,80 +1,80 @@
 const express = require("express");
 const axios = require("axios");
-
 const app = express();
-const PORT = process.env.PORT || 3000; // Use Render's PORT environment variable
 
-// MP3 Download Route
 app.get("/mp3", async (req, res) => {
   const { url } = req.query;
 
   if (!url) {
-    return res.status(400).send("Please provide a valid YouTube URL.");
+    return res.status(400).json({ error: "Please provide a valid YouTube URL." });
   }
 
   try {
-    const apiUrl = `https://www.samirxpikachu.run.place/ytb?url=${encodeURIComponent(url)}`;
-    const response = await axios.get(apiUrl, { timeout: 15000 }); // 15-second timeout
+    // Fetch data from the API
+    const response = await axios.get(`https://www.samirxpikachu.run.place/ytb?url=${encodeURIComponent(url)}`);
+    const data = response.data;
 
-    const audioUrl = response.data?.data?.audios;
-    const title = response.data?.data?.title || "audio";
-
-    if (!audioUrl) {
-      return res.status(500).send("Failed to retrieve audio link from the API.");
+    // Check if the API returned a valid response
+    if (!data.audios) {
+      return res.status(500).json({ error: "Audio not available for this video." });
     }
 
-    // Set headers for downloading with title as filename
-    res.setHeader("Content-Disposition", `attachment; filename="${title}.mp3"`);
-    res.setHeader("Content-Type", "audio/mpeg");
-
-    // Stream the audio content directly to the client
-    const audioStream = await axios.get(audioUrl, { responseType: "stream" });
-    audioStream.data.pipe(res);
+    // Send the audio link and metadata
+    res.json({
+      success: true,
+      message: "Audio is ready for download.",
+      title: data.title,
+      author: data.author,
+      duration: `${Math.floor(data.duration / 60)}:${data.duration % 60}`,
+      image: data.image,
+      audioLink: data.audios
+    });
   } catch (error) {
-    console.error("Error in /mp3 route:", error.message);
-    res.status(500).send("An error occurred while processing your request.");
+    console.error(error.message);
+    res.status(500).json({ error: "An error occurred while processing your request." });
   }
 });
 
-// MP4 Download Route
 app.get("/mp4", async (req, res) => {
   const { url } = req.query;
 
   if (!url) {
-    return res.status(400).send("Please provide a valid YouTube URL.");
+    return res.status(400).json({ error: "Please provide a valid YouTube URL." });
   }
 
   try {
-    const apiUrl = `https://www.samirxpikachu.run.place/ytb?url=${encodeURIComponent(url)}`;
-    const response = await axios.get(apiUrl, { timeout: 15000 }); // 15-second timeout
+    // Fetch data from the API
+    const response = await axios.get(`https://www.samirxpikachu.run.place/ytb?url=${encodeURIComponent(url)}`);
+    const data = response.data;
 
-    const videoUrl = response.data?.data?.videos;
-    const title = response.data?.data?.title || "video";
-
-    if (!videoUrl) {
-      return res.status(500).send("Failed to retrieve video link from the API.");
+    // Check if the API returned a valid response
+    if (!data.videos) {
+      return res.status(500).json({ error: "Video not available for this URL." });
     }
 
-    // Set headers for downloading with title as filename
-    res.setHeader("Content-Disposition", `attachment; filename="${title}.mp4"`);
-    res.setHeader("Content-Type", "video/mp4");
-
-    // Stream the video content directly to the client
-    const videoStream = await axios.get(videoUrl, { responseType: "stream" });
-    videoStream.data.pipe(res);
+    // Send the video link and metadata
+    res.json({
+      success: true,
+      message: "Video is ready for download.",
+      title: data.title,
+      author: data.author,
+      duration: `${Math.floor(data.duration / 60)}:${data.duration % 60}`,
+      image: data.image,
+      videoLink: data.videos
+    });
   } catch (error) {
-    console.error("Error in /mp4 route:", error.message);
-    res.status(500).send("An error occurred while processing your request.");
+    console.error(error.message);
+    res.status(500).json({ error: "An error occurred while processing your request." });
   }
 });
 
-// Error Handling Middleware
-app.use((err, req, res, next) => {
-  console.error("Global Error:", err.stack);
-  res.status(500).send("An internal server error occurred.");
-});
+// Export the app (for serverless environments like Vercel)
+module.exports = app;
 
-// Start Server
-app.listen(PORT, () => {
-  console.log(`Server is running at http://localhost:${PORT}`);
-});
+// Start the app (for local development)
+if (require.main === module) {
+  const PORT = process.env.PORT || 3000;
+  app.listen(PORT, () => {
+    console.log(`Server is running on http://localhost:${PORT}`);
+  });
+}
