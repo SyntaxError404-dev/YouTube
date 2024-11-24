@@ -1,80 +1,82 @@
-const express = require("express");
-const axios = require("axios");
+const express = require('express');
+const axios = require('axios');
+const fs = require('fs');
+const path = require('path');
+
 const app = express();
+const PORT = 3000;
 
-app.get("/mp3", async (req, res) => {
-  const { url } = req.query;
+// Base API URL
+const BASE_API_URL = 'https://www.samirxpikachu.run.place/ytb?url=';
 
-  if (!url) {
-    return res.status(400).json({ error: "Please provide a valid YouTube URL." });
-  }
-
+// Helper function to download and save the file
+async function downloadFile(url, filename, res) {
   try {
-    // Fetch data from the API
-    const response = await axios.get(`https://www.samirxpikachu.run.place/ytb?url=${encodeURIComponent(url)}`);
-    const data = response.data;
+    const response = await axios.get(url, { responseType: 'stream' });
+    const filePath = path.join(__dirname, filename);
 
-    // Check if the API returned a valid response
-    if (!data.audios) {
-      return res.status(500).json({ error: "Audio not available for this video." });
-    }
+    const writer = fs.createWriteStream(filePath);
+    response.data.pipe(writer);
 
-    // Send the audio link and metadata
-    res.json({
-      success: true,
-      message: "Audio is ready for download.",
-      title: data.title,
-      author: data.author,
-      duration: `${Math.floor(data.duration / 60)}:${data.duration % 60}`,
-      image: data.image,
-      audioLink: data.audios
+    writer.on('finish', () => {
+      res.download(filePath, filename, (err) => {
+        if (!err) fs.unlinkSync(filePath); // Delete file after download
+      });
+    });
+
+    writer.on('error', () => {
+      res.status(500).send('Error downloading the file.');
     });
   } catch (error) {
-    console.error(error.message);
-    res.status(500).json({ error: "An error occurred while processing your request." });
+    res.status(500).send('Error fetching file from the API.');
   }
-});
-
-app.get("/mp4", async (req, res) => {
-  const { url } = req.query;
-
-  if (!url) {
-    return res.status(400).json({ error: "Please provide a valid YouTube URL." });
-  }
-
-  try {
-    // Fetch data from the API
-    const response = await axios.get(`https://www.samirxpikachu.run.place/ytb?url=${encodeURIComponent(url)}`);
-    const data = response.data;
-
-    // Check if the API returned a valid response
-    if (!data.videos) {
-      return res.status(500).json({ error: "Video not available for this URL." });
-    }
-
-    // Send the video link and metadata
-    res.json({
-      success: true,
-      message: "Video is ready for download.",
-      title: data.title,
-      author: data.author,
-      duration: `${Math.floor(data.duration / 60)}:${data.duration % 60}`,
-      image: data.image,
-      videoLink: data.videos
-    });
-  } catch (error) {
-    console.error(error.message);
-    res.status(500).json({ error: "An error occurred while processing your request." });
-  }
-});
-
-// Export the app (for serverless environments like Vercel)
-module.exports = app;
-
-// Start the app (for local development)
-if (require.main === module) {
-  const PORT = process.env.PORT || 3000;
-  app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
-  });
 }
+
+// MP3 Endpoint
+app.get('/mp3', async (req, res) => {
+  const videoUrl = req.query.url;
+
+  if (!videoUrl) {
+    return res.status(400).send('Please provide a YouTube video URL.');
+  }
+
+  try {
+    const apiResponse = await axios.get(`${BASE_API_URL}${videoUrl}`);
+    const audioUrl = apiResponse.data.audios;
+
+    if (!audioUrl) {
+      return res.status(500).send('Audio file not found.');
+    }
+
+    await downloadFile(audioUrl, 'audio.mp3', res);
+  } catch (error) {
+    res.status(500).send('Failed to process the request.');
+  }
+});
+
+// MP4 Endpoint
+app.get('/mp4', async (req, res) => {
+  const videoUrl = req.query.url;
+
+  if (!videoUrl) {
+    return res.status(400).send('Please provide a YouTube video URL.');
+  }
+
+  try {
+    const apiResponse = await axios.get(`${BASE_API_URL}${videoUrl}`);
+    const videoUrlData = apiResponse.data.videos;
+
+    if (!videoUrlData) {
+      return res.status(500).send('Video file not found.');
+    }
+
+    await downloadFile(videoUrlData, 'video.mp4', res);
+  } catch (error) {
+    res.status(500).send('Failed to process the request.');
+  }
+});
+
+// Start the server
+app.listen(PORT, () => {
+  console.log(`Server is running at http://localhost:${PORT}`);
+});
