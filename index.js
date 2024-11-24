@@ -1,79 +1,69 @@
-const express = require('express');
-const axios = require('axios');
-const ffmpeg = require('fluent-ffmpeg');
-const ffmpegPath = require('ffmpeg-static');
-
-ffmpeg.setFfmpegPath(ffmpegPath);
+const express = require("express");
+const axios = require("axios");
 
 const app = express();
-const port = 3000;
+const PORT = 3000;
 
-app.get('/mp4', async (req, res) => {
-    const videoUrl = req.query.url;
+app.get("/mp3", async (req, res) => {
+  const { url } = req.query;
 
-    if (!videoUrl) {
-        return res.status(400).send('URL is required');
+  if (!url) {
+    return res.status(400).send("Please provide a valid YouTube URL.");
+  }
+
+  try {
+    const apiUrl = `https://smfahim.xyz/ytb?url=${encodeURIComponent(url)}`;
+    const response = await axios.get(apiUrl);
+    const audioUrl = response.data?.data?.audio;
+    const title = response.data?.data?.title || "audio";
+
+    if (!audioUrl) {
+      return res.status(500).send("Failed to retrieve audio link from the API.");
     }
 
-    try {
-        const { data } = await axios.get(`https://www.x-noobs-api.000.pe/m/ytDl?url=${encodeURIComponent(videoUrl)}`);
-        const downloadUrl = data.dUrl;
+    // Set headers for direct download with the title
+    res.setHeader("Content-Disposition", `attachment; filename="${title}.mp3"`);
+    res.setHeader("Content-Type", "audio/mp4");
 
-        if (!downloadUrl) {
-            return res.status(500).send('Unable to retrieve download URL');
-        }
-
-        const downloadResponse = await axios({
-            url: downloadUrl,
-            method: 'GET',
-            responseType: 'stream'
-        });
-
-        res.setHeader('Content-Disposition', 'attachment; filename="ytdl-mp4-nexus.mp4"');
-        downloadResponse.data.pipe(res);
-    } catch (error) {
-        console.error('Error downloading file:', error.message);
-        res.status(500).send('Error downloading file');
-    }
+    // Stream the audio content
+    const audioStream = await axios.get(audioUrl, { responseType: "stream" });
+    audioStream.data.pipe(res);
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).send("An error occurred while processing your request.");
+  }
 });
 
-app.get('/mp3', async (req, res) => {
-    const videoUrl = req.query.url;
+app.get("/mp4", async (req, res) => {
+  const { url } = req.query;
+
+  if (!url) {
+    return res.status(400).send("Please provide a valid YouTube URL.");
+  }
+
+  try {
+    const apiUrl = `https://smfahim.xyz/ytb?url=${encodeURIComponent(url)}`;
+    const response = await axios.get(apiUrl);
+    const videoUrl = response.data?.data?.video;
+    const title = response.data?.data?.title || "video";
 
     if (!videoUrl) {
-        return res.status(400).send('URL is required');
+      return res.status(500).send("Failed to retrieve video link from the API.");
     }
 
-    try {
-        const { data } = await axios.get(`https://www.x-noobs-api.000.pe/m/ytDl?url=${encodeURIComponent(videoUrl)}`);
-        const downloadUrl = data.dUrl;
+    // Set headers for direct download with the title
+    res.setHeader("Content-Disposition", `attachment; filename="${title}.mp4"`);
+    res.setHeader("Content-Type", "video/mp4");
 
-        if (!downloadUrl) {
-            return res.status(500).send('Unable to retrieve download URL');
-        }
-
-        const downloadResponse = await axios({
-            url: downloadUrl,
-            method: 'GET',
-            responseType: 'stream'
-        });
-
-        res.setHeader('Content-Disposition', 'attachment; filename="ytdl-mp3-nexus.mp3"');
-
-        ffmpeg(downloadResponse.data)
-            .audioCodec('libmp3lame')
-            .format('mp3')
-            .on('error', (err) => {
-                console.error('Error converting to audio:', err.message);
-                res.status(500).send('Error converting to audio');
-            })
-            .pipe(res, { end: true });
-    } catch (error) {
-        console.error('Error downloading file:', error.message);
-        res.status(500).send('Error downloading file');
-    }
+    // Stream the video content
+    const videoStream = await axios.get(videoUrl, { responseType: "stream" });
+    videoStream.data.pipe(res);
+  } catch (error) {
+    console.error(error.message);
+    res.status(500).send("An error occurred while processing your request.");
+  }
 });
 
-app.listen(port, () => {
-    console.log(`Server is running at http://localhost:${port}`);
+app.listen(PORT, () => {
+  console.log(`Server is running at http://localhost:${PORT}`);
 });
